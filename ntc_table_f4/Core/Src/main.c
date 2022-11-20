@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,7 +44,22 @@ DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim4;
 
+
 /* USER CODE BEGIN PV */
+
+uint16_t adc_raw[1];
+float ntc_tmp = 0;
+uint16_t ntc_resistance;
+
+// constants
+#define ntc_up_resistance 10000.0f
+
+// steinhart constants
+#define A 0.003354016f
+#define B 0.000256985f
+#define C 0.000000064f
+
+uint8_t sch_100ms = 255;
 
 /* USER CODE END PV */
 
@@ -54,6 +69,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM4_Init(void);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -96,12 +112,36 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
+  // adc
+  HAL_ADCEx_InjectedStart(&hadc1);
+
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_raw, 1);
+  // timer 4 interrupt
+  HAL_TIM_Base_Start_IT(&htim4);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	if(sch_100ms){
+	/* get adc value */
+	HAL_ADC_Start_IT(&hadc1);
+
+	/* calc. ntc resistance */
+	ntc_resistance = ((ntc_up_resistance)/((4095.0/adc_raw[0]) - 1));
+
+	/* temp */
+	float ntc_ln = log(ntc_resistance);
+	/* calc. temperature */
+	ntc_tmp = (1.0/(A + B*ntc_ln + C*ntc_ln*ntc_ln*ntc_ln)) - 273.15;
+
+	/* nullify */
+	sch_100ms = 0;
+	}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -278,6 +318,15 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+ if(htim->Instance == TIM4)
+	{
+		/* set every 100ms */
+		sch_100ms = 255;
+	}
+}
 
 /* USER CODE END 4 */
 
