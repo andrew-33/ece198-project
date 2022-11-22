@@ -57,7 +57,8 @@ uint16_t ntc_resistance;
 // steinhart constants
 #define A 0.003354016f
 #define B 0.000256985f
-#define C 0.000000064f
+#define C 0.000002620f
+#define D 0.000000064f
 
 uint8_t sch_100ms = 255;
 
@@ -127,19 +128,19 @@ int main(void)
   while (1)
   {
 	if(sch_100ms){
-	/* get adc value */
-	HAL_ADC_Start_IT(&hadc1);
+		/* get adc value */
+		HAL_ADC_Start_IT(&hadc1);
 
-	/* calc. ntc resistance */
-	ntc_resistance = ((ntc_up_resistance)/((4095.0/adc_raw[0]) - 1));
+		/* calc. ntc resistance */
+		ntc_resistance = ((ntc_up_resistance)/((4095.0/adc_raw[0]) - 1));
 
-	/* temp */
-	float ntc_ln = log(ntc_resistance);
-	/* calc. temperature */
-	ntc_tmp = (1.0/(A + B*ntc_ln + C*ntc_ln*ntc_ln*ntc_ln)) - 273.15;
+		/* temp */
+		float ntc_ln = log(ntc_resistance);
+		/* calc. temperature */
+		ntc_tmp = (1.0/(A + B*ntc_ln + C*ntc_ln*ntc_ln + D*ntc_ln*ntc_ln*ntc_ln)) - 273.15;
 
-	/* nullify */
-	sch_100ms = 0;
+		/* nullify */
+		sch_100ms = 0;
 	}
 
     /* USER CODE END WHILE */
@@ -220,7 +221,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
